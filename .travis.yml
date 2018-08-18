@@ -1,0 +1,57 @@
+env:
+  global:
+      - REPO_DIR="scikit-image"
+      # Also see DAILY_COMMIT below
+      - BUILD_COMMIT=v0.14.0
+      - PLAT=x86_64
+      - UNICODE_WIDTH=32
+      - NP_BUILD_DEP="numpy==1.11.3"
+      - NP_TEST_DEP="numpy==1.11.3"
+      - GEN_DEPS="matplotlib networkx scipy pillow"
+      - MANYLINUX_URL=https://5cf40426d9f06eb7461d-6fe47d9331aba7cd62fc36c7196769e4.ssl.cf2.rackcdn.com
+      - WHEELHOUSE_UPLOADER_USERNAME=travis-worker
+      # Following generated with
+      # travis encrypt -r scikit-image/scikit-image-wheels WHEELHOUSE_UPLOADER_SECRET=<the api key>
+      - secure: "D1TKxfHUoKjAlABf5FIGKW+nsijNa6oQrdxS++DWR21SreuIBzN3Mn2T0IbraB4nck76MQKGFtM1sJlspBr2juGyCeO4uQe1BVPz4A0hOSn31J1+Q+aG1r13pGiJ5XjpN+oL91vQPAN8Eeesrxwbompk3uuy2y4PQsMsZSSSlRiNCR79iRO8G/Zj/64NnP10eYHWDYXjlx14lBAUlZrituZQLU3uXGFyk4SebdE5DqIseq1cKaYKwO0QSzovOqlD7qAma3ITDNcf6g7ltwash+59Ah5KYZraYvxBCgrE2kfxV3VlLF0vvPa0XH6+EMxLVy38h5KbDlr/PTf+QalOpLbqQ30qtqNk1s1YBSidCShGZ+593L/yesZ/I1oR7vabwdovRrdG/g6aFIPMaNNbqdwTQmAK4IvYUx8s3FPbEct9I6zK1YQRIRHCf8jLqpxpnIMq8f8Ef/htnuzmsuB7woG5G+G4noOGu7fihU8+/vcW6R96zhchRhGjNFXeqcDkCvitCfTsLV2eqF0A2ZpZ8Gukktss5C6+wSEYD8KrkiLZ+aW5g6NUPQNNcKfsjkXcBv5iTAh86Tc+/ymUI7x39TEYRuLHjrDuPxXogIbpdy/Fw8zPYHHLR5DjBfh4LamaYpgWfkC8kdXpAyVC8g4d6u+5+plWmYAUS0/69D+fToU="
+      # Commit when running from daily branch
+      - DAILY_COMMIT=master
+
+language: python
+# Default Python version is usually 2.7
+python: 3.5
+sudo: required
+dist: trusty
+services: docker
+
+matrix:
+  exclude:
+      # Exclude the default Python 3.5 build
+      - python: 3.5
+  include:
+    - os: osx
+      language: generic
+      env:
+        - MB_PYTHON_VERSION=3.6
+        - NP_BUILD_DEP=numpy==1.12.0
+        - NP_TEST_DEP=numpy==1.12.0
+
+before_install:
+    - CONTAINER="my_wheelhouse"
+    - UPLOAD_ARGS="--no-update-index";
+    - BUILD_DEPENDS="$NP_BUILD_DEP Cython"
+    - TEST_DEPENDS="$NP_TEST_DEP nose pytest $GEN_DEPS"
+    - pip install $BUILD_DEPENDS
+
+install:
+    - pip install --no-binary=scikit-image scikit-image
+
+script:
+    - echo "In script"
+
+after_success:
+    # Upload wheels to Rackspace container
+    - pip install wheelhouse-uploader
+    - python -m wheelhouse_uploader upload --local-folder
+          ${TRAVIS_BUILD_DIR}/wheelhouse/
+          $UPLOAD_ARGS
+          $CONTAINER
